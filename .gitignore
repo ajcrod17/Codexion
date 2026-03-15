@@ -1,0 +1,35 @@
+# Python virtual environments
+.venv/
+venv/
+
+# Subject/reference files (not part of submission sources)
+*.pdf
+*.txt
+
+# Build artifacts
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+codexion
+
+# C/C++ debug and profiling artifacts
+*.dSYM/
+*.gcda
+*.gcno
+*.gcov
+gmon.out
+vgcore.*
+core
+
+# Temporary/editor files
+*~
+*.swp
+*.swo
+.DS_Store
+
+# Tool caches
+.vscode/
+.idea/
