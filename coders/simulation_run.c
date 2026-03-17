@@ -3,15 +3,16 @@
 /*                                                        :::      ::::::::   */
 /*   simulation_run.c                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: acaldeir <acaldeir@student.42.fr>          +#+  +:+       +#+        */
+/*   By: acaldeir <acaldeir@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/16 16:32:40 by acaldeir          #+#    #+#             */
-/*   Updated: 2026/03/16 16:32:41 by acaldeir         ###   ########.fr       */
+/*   Updated: 2026/03/17 18:02:20 by acaldeir         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "codexion.h"
 
+// Start all coder threads. Return 0 on success, 1 on failure.
 static int	start_coder_threads(t_sim *sim)
 {
 	int	i;
@@ -27,6 +28,9 @@ static int	start_coder_threads(t_sim *sim)
 	return (0);
 }
 
+// Run simulation: start all coder threads and the monitor thread, wait for
+// the monitor to signal the end of the simulation, then wake up all coders and
+// wait for them to finish.
 int	sim_run(t_sim *sim)
 {
 	int	i;

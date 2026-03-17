@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   simulation_destroy.c                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: acaldeir <acaldeir@student.42.fr>          +#+  +:+       +#+        */
+/*   By: acaldeir <acaldeir@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/16 16:32:24 by acaldeir          #+#    #+#             */
-/*   Updated: 2026/03/16 16:32:25 by acaldeir         ###   ########.fr       */
+/*   Updated: 2026/03/17 11:15:43 by acaldeir         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 

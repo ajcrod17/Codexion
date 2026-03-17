@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   simulation_init.c                                  :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: acaldeir <acaldeir@student.42.fr>          +#+  +:+       +#+        */
+/*   By: acaldeir <acaldeir@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/16 16:32:32 by acaldeir          #+#    #+#             */
-/*   Updated: 2026/03/16 16:32:33 by acaldeir         ###   ########.fr       */
+/*   Updated: 2026/03/17 15:03:31 by acaldeir         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 

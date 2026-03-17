@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   logging.c                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: acaldeir <acaldeir@student.42.fr>          +#+  +:+       +#+        */
+/*   By: acaldeir <acaldeir@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/16 16:30:06 by acaldeir          #+#    #+#             */
-/*   Updated: 2026/03/16 16:30:07 by acaldeir         ###   ########.fr       */
+/*   Updated: 2026/03/17 19:36:23 by acaldeir         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 
 #include <stdio.h>
 
+// logs the state of a coder with a timestamp, thread-safe
 void	log_state(t_sim *sim, int coder_id, const char *msg)
 {
 	pthread_mutex_lock(&sim->log_mtx);

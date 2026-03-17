@@ -3,17 +3,17 @@
 /*                                                        :::      ::::::::   */
 /*   time_utils.c                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: acaldeir <acaldeir@student.42.fr>          +#+  +:+       +#+        */
+/*   By: acaldeir <acaldeir@student.42lisboa.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/16 16:32:55 by acaldeir          #+#    #+#             */
-/*   Updated: 2026/03/16 16:32:56 by acaldeir         ###   ########.fr       */
+/*   Updated: 2026/03/17 19:44:08 by acaldeir         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "codexion.h"
 
 #include <unistd.h>
-
+// gets the current time in milliseconds
 long long	now_ms(void)
 {
 	struct timeval	tv;
@@ -27,6 +27,7 @@ long long	elapsed_ms(const t_sim *sim)
 	return (now_ms() - sim->start_ms);
 }
 
+// sleep for ms milliseconds, but wakes up early if the sim is requested to stop
 void	sleep_ms_interruptible(t_sim *sim, long long ms)
 {
 	long long	end;
