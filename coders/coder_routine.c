@@ -3,16 +3,16 @@
 /*                                                        :::      ::::::::   */
 /*   coder_routine.c                                    :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: acaldeir <acaldeir@student.42lisboa.com    +#+  +:+       +#+        */
+/*   By: acaldeir <acaldeir@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/16 16:29:31 by acaldeir          #+#    #+#             */
-/*   Updated: 2026/03/17 19:47:14 by acaldeir         ###   ########.fr       */
+/*   Updated: 2026/03/18 09:14:38 by acaldeir         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "codexion.h"
 
-// to avoid deadlock, always pick the dongle with the smaller id first
+// To avoid deadlock, always pick the dongle with the smaller id first
 static void	pick_order(t_coder *coder, t_dongle **first, t_dongle **second)
 {
 	if (coder->left->id < coder->right->id)
@@ -27,6 +27,7 @@ static void	pick_order(t_coder *coder, t_dongle **first, t_dongle **second)
 	}
 }
 
+// Takes the 1st dongle and then the 2nd, if it fails releases the 1st dongle
 static int	acquire_dongles(t_coder *coder, t_dongle *first, t_dongle *second)
 {
 	if (take_dongle(coder, first) != 0)
@@ -39,7 +40,8 @@ static int	acquire_dongles(t_coder *coder, t_dongle *first, t_dongle *second)
 	return (0);
 }
 
-// must be called with both dongles held
+// Must be called with both dongles held, changes coder state, increments count,
+// prints log, and goes to sleep, wakes up earlier if the sim stops
 static void	run_compile_phase(t_coder *coder)
 {
 	coder->state = STATE_COMPILING;
@@ -49,6 +51,8 @@ static void	run_compile_phase(t_coder *coder)
 	sleep_ms_interruptible(coder->sim, coder->sim->args.time_to_compile);
 }
 
+// Changes coder state to debugging, prints log, and goes to sleep, wakes up earlier
+// if the sim stops, then repeats for refactoring
 static void	run_post_compile_phases(t_coder *coder)
 {
 	coder->state = STATE_DEBUGGING;
@@ -59,6 +63,16 @@ static void	run_post_compile_phases(t_coder *coder)
 	sleep_ms_interruptible(coder->sim, coder->sim->args.time_to_refactor);
 }
 
+/**
+ * The main simulation loop for each coder thread.
+ * * Each coder follows a strict cycle:
+ * 1. Check if the simulation should stop (burnout or completion).
+ * 2. Acquire two adjacent dongles using a fixed-order hierarchy to 
+ * prevent deadlocks (Low ID then High ID).
+ * 3. Perform the 'Compile' phase (resets burnout timer).
+ * 4. Release dongles to allow neighbors to work.
+ * 5. Perform 'Debug' and 'Refactor' phases independently.
+ */
 void	*coder_routine(void *arg)
 {
 	t_coder		*coder;

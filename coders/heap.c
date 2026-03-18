@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   heap.c                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: acaldeir <acaldeir@student.42lisboa.com    +#+  +:+       +#+        */
+/*   By: acaldeir <acaldeir@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/16 16:29:55 by acaldeir          #+#    #+#             */
-/*   Updated: 2026/03/17 11:14:56 by acaldeir         ###   ########.fr       */
+/*   Updated: 2026/03/18 14:46:07 by acaldeir         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,6 +23,7 @@ static bool	request_less(const t_heap *heap, t_request a, t_request b)
 	return (a.seq < b.seq);
 }
 
+// swap two request structs
 static void	swap_request(t_request *a, t_request *b)
 {
 	t_request	tmp;
@@ -51,18 +52,18 @@ void	heap_destroy(t_heap *heap)
 	heap->capacity = 0;
 }
 
-int	heap_push(t_heap *heap, t_request req)
+int	heap_push(t_heap *heap, t_request req) // Min-Heap Insert ("Bubble-up")
 {
 	int	i;
 
-	if (heap->size >= heap->capacity)
+	if (heap->size >= heap->capacity) // if heap is full return 1
 		return (1);
 	i = heap->size;
-	heap->items[i] = req;
+	heap->items[i] = req; // adding to the "Bottom"
 	heap->size++;
-	while (i > 0)
+	while (i > 0) // "Bubble-Up" Logic
 	{
-		int p = (i - 1) / 2;
+		int p = (i - 1) / 2; // parent of an item at index i is always at (i - 1)/2
 		if (!request_less(heap, heap->items[i], heap->items[p]))
 			break ;
 		swap_request(&heap->items[i], &heap->items[p]);
@@ -102,6 +103,8 @@ bool	heap_pop(t_heap *heap, t_request *out)
 	return (true);
 }
 
+//return false if heap is empty, else return true and
+// update *out with the coder request at the top of the heap
 bool	heap_peek(const t_heap *heap, t_request *out)
 {
 	if (heap->size == 0)

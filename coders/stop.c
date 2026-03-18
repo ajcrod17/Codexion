@@ -3,15 +3,16 @@
 /*                                                        :::      ::::::::   */
 /*   stop.c                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: acaldeir <acaldeir@student.42lisboa.com    +#+  +:+       +#+        */
+/*   By: acaldeir <acaldeir@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/16 16:32:47 by acaldeir          #+#    #+#             */
-/*   Updated: 2026/03/17 11:16:01 by acaldeir         ###   ########.fr       */
+/*   Updated: 2026/03/18 08:39:14 by acaldeir         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "codexion.h"
 
+// checks the stop flag in the sim struct and returns the boolean value
 bool	should_stop(t_sim *sim)
 {
 	bool	stop;
@@ -22,6 +23,7 @@ bool	should_stop(t_sim *sim)
 	return (stop);
 }
 
+// changes the stop flag to true and updates stop info in the sim struct
 void	request_stop(t_sim *sim, int coder_id, const char *reason)
 {
 	pthread_mutex_lock(&sim->stop_mtx);
