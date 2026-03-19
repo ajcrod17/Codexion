@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   monitor.c                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: acaldeir <acaldeir@student.42lisboa.com>   +#+  +:+       +#+        */
+/*   By: acaldeir <acaldeir@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/16 16:30:18 by acaldeir          #+#    #+#             */
-/*   Updated: 2026/03/18 21:30:16 by acaldeir         ###   ########.fr       */
+/*   Updated: 2026/03/19 16:53:31 by acaldeir         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 
 #include <unistd.h>
 
+// checks if every coder's compiles_done counter has reached the target
 static bool	all_coders_done(const t_sim *sim)
 {
 	int	i;
@@ -29,6 +30,8 @@ static bool	all_coders_done(const t_sim *sim)
 	return (true);
 }
 
+// Loops through the coders and checks time without compiling vs time to burnout
+// if bigger sets state to burnout, requests stop and prints log
 static bool	check_burnout(t_sim *sim, long long now)
 {
 	int			i;
@@ -50,6 +53,10 @@ static bool	check_burnout(t_sim *sim, long long now)
 	return (false);
 }
 
+// Runs in a loop until the stop_flag is set to true, checks burnout for each
+// coder, checks if every coder's compiles_done counter has reached the target
+// and if yes, requests all threads to stop.
+// Sleeps for 1000 microseconds (1ms) - checks ~10 times within the 10ms window.
 void	*monitor_routine(void *arg)
 {
 	t_sim		*sim;

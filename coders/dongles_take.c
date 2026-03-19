@@ -1,18 +1,19 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   dongles.c                                          :+:      :+:    :+:   */
+/*   dongles_take.c                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: acaldeir <acaldeir@student.42lisboa.com>   +#+  +:+       +#+        */
+/*   By: acaldeir <acaldeir@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/03/16 16:29:44 by acaldeir          #+#    #+#             */
-/*   Updated: 2026/03/18 21:14:29 by acaldeir         ###   ########.fr       */
+/*   Created: 2026/03/19 12:10:00 by copilot           #+#    #+#             */
+/*   Updated: 2026/03/19 13:15:51 by acaldeir         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "codexion.h"
 
 #include <time.h>
+
 /*
  checks:
  1. dongle is currently free from coders?
@@ -32,15 +33,11 @@ static bool	can_take_now(t_dongle *dongle, t_request self)
 	return (head.coder_id == self.coder_id);
 }
 
-static struct timespec	to_abs_timespec(long long target_ms)
-{
-	struct timespec	ts;
-
-	ts.tv_sec = target_ms / 1000;
-	ts.tv_nsec = (target_ms % 1000) * 1000000;
-	return (ts);
-}
-
+// Checks if dongle is past cooldown, if yes, converts millisecond timestamp
+// into seconds and nanoseconds required by the system. Calls timedwait that
+// releases the mutex while sleeping and re-acquires it upon waking.
+// cond_wait waits for signal from a coder who is currently compiling and also 
+// releases the mutex while sleeping and re-acquires it upon waking.
 static void	wait_for_signal_or_cooldown(t_dongle *dongle)
 {
 	struct timespec	deadline;
@@ -49,7 +46,8 @@ static void	wait_for_signal_or_cooldown(t_dongle *dongle)
 	now = now_ms();
 	if (dongle->available_at_ms > now)
 	{
-		deadline = to_abs_timespec(dongle->available_at_ms);
+		deadline.tv_sec = dongle->available_at_ms / 1000;
+		deadline.tv_nsec = (dongle->available_at_ms % 1000) * 1000000;
 		pthread_cond_timedwait(&dongle->cv, &dongle->mtx, &deadline);
 	}
 	else
@@ -92,7 +90,7 @@ static int	wait_for_turn(t_coder *coder, t_dongle *dongle, t_request self)
  locks dongle mutex
  push request into heap
  calls function to wait for dongle availability
- logs new coder state
+ prints log with new coder state
 */
 int	take_dongle(t_coder *coder, t_dongle *dongle)
 {
@@ -113,14 +111,4 @@ int	take_dongle(t_coder *coder, t_dongle *dongle)
 	pthread_mutex_unlock(&dongle->mtx);
 	log_state(coder->sim, coder->id, "has taken a dongle");
 	return (0);
-}
-
-void	release_dongle(t_coder *coder, t_dongle *dongle)
-{
-	(void)coder;
-	pthread_mutex_lock(&dongle->mtx);
-	dongle->holder_id = -1;
-	dongle->available_at_ms = now_ms() + coder->sim->args.dongle_cooldown;
-	pthread_cond_broadcast(&dongle->cv);
-	pthread_mutex_unlock(&dongle->mtx);
 }

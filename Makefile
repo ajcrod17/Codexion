@@ -10,9 +10,9 @@ SRC = \
 	coders/logging.c \
 	coders/stop.c \
 	coders/heap_base.c \
-	coders/heap_push.c \
-	coders/heap_pop.c \
-	coders/dongles.c \
+	coders/heap.c \
+	coders/dongles_take.c \
+	coders/dongles_release.c \
 	coders/coder_state.c \
 	coders/coder_routine.c \
 	coders/monitor.c \

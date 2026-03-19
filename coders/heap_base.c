@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   heap_base.c                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: acaldeir <acaldeir@student.42lisboa.com>   +#+  +:+       +#+        */
+/*   By: acaldeir <acaldeir@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/18 21:00:00 by acaldeir          #+#    #+#             */
-/*   Updated: 2026/03/18 21:27:52 by acaldeir         ###   ########.fr       */
+/*   Updated: 2026/03/19 12:51:04 by acaldeir         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,6 +33,8 @@ void	heap_destroy(t_heap *heap)
 	heap->capacity = 0;
 }
 
+// check if heap is empty
+// assign request at the top of the heap to out and "return" it
 bool	heap_peek(const t_heap *heap, t_request *out)
 {
 	if (heap->size == 0)

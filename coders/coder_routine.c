@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   coder_routine.c                                    :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: acaldeir <acaldeir@student.42lisboa.com>   +#+  +:+       +#+        */
+/*   By: acaldeir <acaldeir@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/16 16:29:31 by acaldeir          #+#    #+#             */
-/*   Updated: 2026/03/18 19:10:36 by acaldeir         ###   ########.fr       */
+/*   Updated: 2026/03/19 15:59:07 by acaldeir         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,8 +40,8 @@ static int	acquire_dongles(t_coder *coder, t_dongle *first, t_dongle *second)
 	return (0);
 }
 
-// Must be called with both dongles held, changes coder state, increments count,
-// prints log, and goes to sleep, wakes up earlier if the sim stops
+// Must be called with both dongles held, changes coder state, prints log,
+// and goes to sleep, wakes up earlier if the sim stops
 static void	run_compile_phase(t_coder *coder)
 {
 	coder_set_compile_state(coder, now_ms());
@@ -78,9 +78,9 @@ void	*coder_routine(void *arg)
 	t_dongle	*second;
 
 	coder = (t_coder *)arg;
+	pick_order(coder, &first, &second);
 	while (!should_stop(coder->sim))
 	{
-		pick_order(coder, &first, &second);
 		if (acquire_dongles(coder, first, second) != 0)
 			break ;
 		run_compile_phase(coder);

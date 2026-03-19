@@ -3,15 +3,17 @@
 /*                                                        :::      ::::::::   */
 /*   coder_state.c                                      :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: acaldeir <acaldeir@student.42lisboa.com>   +#+  +:+       +#+        */
+/*   By: acaldeir <acaldeir@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/19 09:30:00 by acaldeir          #+#    #+#             */
-/*   Updated: 2026/03/19 09:30:00 by acaldeir         ###   ########.fr       */
+/*   Updated: 2026/03/19 15:44:36 by acaldeir         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "codexion.h"
 
+// Locks coder mtx, changes coder state, sets compile start time, increments
+// count, releases coder mtx
 void	coder_set_compile_state(t_coder *coder, long long now)
 {
 	pthread_mutex_lock(&coder->mtx);
@@ -28,6 +30,7 @@ void	coder_set_simple_state(t_coder *coder, t_state state)
 	pthread_mutex_unlock(&coder->mtx);
 }
 
+// locks mtx and reads last coder compile start
 long long	coder_get_last_compile_start(t_coder *coder)
 {
 	long long	value;
