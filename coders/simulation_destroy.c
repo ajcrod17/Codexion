@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   simulation_destroy.c                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: acaldeir <acaldeir@student.42lisboa.com    +#+  +:+       +#+        */
+/*   By: acaldeir <acaldeir@student.42lisboa.com>   +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/16 16:32:24 by acaldeir          #+#    #+#             */
-/*   Updated: 2026/03/17 11:15:43 by acaldeir         ###   ########.fr       */
+/*   Updated: 2026/03/19 08:20:33 by acaldeir         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,6 +20,12 @@ void	sim_destroy(t_sim *sim)
 
 	if (!sim)
 		return ;
+	i = 0;
+	while (sim->coders && i < sim->args.number_of_coders)
+	{
+		pthread_mutex_destroy(&sim->coders[i].mtx);
+		i++;
+	}
 	i = 0;
 	while (sim->dongles && i < sim->args.number_of_coders)
 	{

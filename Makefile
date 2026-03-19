@@ -9,8 +9,11 @@ SRC = \
 	coders/time_utils.c \
 	coders/logging.c \
 	coders/stop.c \
-	coders/heap.c \
+	coders/heap_base.c \
+	coders/heap_push.c \
+	coders/heap_pop.c \
 	coders/dongles.c \
+	coders/coder_state.c \
 	coders/coder_routine.c \
 	coders/monitor.c \
 	coders/simulation_init.c \

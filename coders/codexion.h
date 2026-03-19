@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   codexion.h                                         :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: acaldeir <acaldeir@student.42lisboa.com>   +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/03/18 19:24:23 by acaldeir          #+#    #+#             */
+/*   Updated: 2026/03/18 19:25:01 by acaldeir         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #ifndef CODEXION_H
 # define CODEXION_H
 
@@ -63,6 +75,7 @@ typedef struct s_coder
 {
 	int				id;
 	pthread_t		thread;
+	pthread_mutex_t	mtx;
 	t_state			state;
 	long long		last_compile_start_ms;
 	int				compiles_done;
@@ -109,6 +122,11 @@ bool		heap_empty(const t_heap *heap);
 
 int			take_dongle(t_coder *coder, t_dongle *dongle);
 void		release_dongle(t_coder *coder, t_dongle *dongle);
+
+void		coder_set_compile_state(t_coder *coder, long long now);
+void		coder_set_simple_state(t_coder *coder, t_state state);
+long long	coder_get_last_compile_start(t_coder *coder);
+int			coder_get_compiles_done(t_coder *coder);
 
 void		*coder_routine(void *arg);
 void		*monitor_routine(void *arg);

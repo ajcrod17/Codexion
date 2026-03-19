@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   monitor.c                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: acaldeir <acaldeir@student.42lisboa.com    +#+  +:+       +#+        */
+/*   By: acaldeir <acaldeir@student.42lisboa.com>   +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/16 16:30:18 by acaldeir          #+#    #+#             */
-/*   Updated: 2026/03/17 11:15:36 by acaldeir         ###   ########.fr       */
+/*   Updated: 2026/03/18 21:30:16 by acaldeir         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,7 +21,7 @@ static bool	all_coders_done(const t_sim *sim)
 	i = 0;
 	while (i < sim->args.number_of_coders)
 	{
-		if (sim->coders[i].compiles_done
+		if (coder_get_compiles_done(&sim->coders[i])
 			< sim->args.number_of_compiles_required)
 			return (false);
 		i++;
@@ -29,30 +29,38 @@ static bool	all_coders_done(const t_sim *sim)
 	return (true);
 }
 
+static bool	check_burnout(t_sim *sim, long long now)
+{
+	int			i;
+	long long	since_last;
+
+	i = 0;
+	while (i < sim->args.number_of_coders)
+	{
+		since_last = now - coder_get_last_compile_start(&sim->coders[i]);
+		if (since_last > sim->args.time_to_burnout)
+		{
+			coder_set_simple_state(&sim->coders[i], STATE_BURNED_OUT);
+			request_stop(sim, sim->coders[i].id, "burnout");
+			log_state(sim, sim->coders[i].id, "burned out");
+			return (true);
+		}
+		i++;
+	}
+	return (false);
+}
+
 void	*monitor_routine(void *arg)
 {
 	t_sim		*sim;
-	int			i;
 	long long	now;
-	long long	since_last;
 
 	sim = (t_sim *)arg;
 	while (!should_stop(sim))
 	{
-		i = 0;
 		now = now_ms();
-		while (i < sim->args.number_of_coders)
-		{
-			since_last = now - sim->coders[i].last_compile_start_ms;
-			if (since_last > sim->args.time_to_burnout)
-			{
-				sim->coders[i].state = STATE_BURNED_OUT;
-				request_stop(sim, sim->coders[i].id, "burnout");
-				log_state(sim, sim->coders[i].id, "burned out");
-				return (NULL);
-			}
-			i++;
-		}
+		if (check_burnout(sim, now))
+			return (NULL);
 		if (all_coders_done(sim))
 		{
 			request_stop(sim, 0, "all_done");

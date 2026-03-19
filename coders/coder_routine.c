@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   coder_routine.c                                    :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: acaldeir <acaldeir@student.42.fr>          +#+  +:+       +#+        */
+/*   By: acaldeir <acaldeir@student.42lisboa.com>   +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/16 16:29:31 by acaldeir          #+#    #+#             */
-/*   Updated: 2026/03/18 09:14:38 by acaldeir         ###   ########.fr       */
+/*   Updated: 2026/03/18 19:10:36 by acaldeir         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -44,21 +44,19 @@ static int	acquire_dongles(t_coder *coder, t_dongle *first, t_dongle *second)
 // prints log, and goes to sleep, wakes up earlier if the sim stops
 static void	run_compile_phase(t_coder *coder)
 {
-	coder->state = STATE_COMPILING;
-	coder->last_compile_start_ms = now_ms();
-	coder->compiles_done++;
+	coder_set_compile_state(coder, now_ms());
 	log_state(coder->sim, coder->id, "is compiling");
 	sleep_ms_interruptible(coder->sim, coder->sim->args.time_to_compile);
 }
 
-// Changes coder state to debugging, prints log, and goes to sleep, wakes up earlier
-// if the sim stops, then repeats for refactoring
+// Changes coder state to debugging, prints log, and goes to sleep, wakes up
+// earlier if the sim stops, then repeats for refactoring
 static void	run_post_compile_phases(t_coder *coder)
 {
-	coder->state = STATE_DEBUGGING;
+	coder_set_simple_state(coder, STATE_DEBUGGING);
 	log_state(coder->sim, coder->id, "is debugging");
 	sleep_ms_interruptible(coder->sim, coder->sim->args.time_to_debug);
-	coder->state = STATE_REFACTORING;
+	coder_set_simple_state(coder, STATE_REFACTORING);
 	log_state(coder->sim, coder->id, "is refactoring");
 	sleep_ms_interruptible(coder->sim, coder->sim->args.time_to_refactor);
 }

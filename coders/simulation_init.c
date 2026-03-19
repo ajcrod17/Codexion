@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   simulation_init.c                                  :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: acaldeir <acaldeir@student.42lisboa.com    +#+  +:+       +#+        */
+/*   By: acaldeir <acaldeir@student.42lisboa.com>   +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/16 16:32:32 by acaldeir          #+#    #+#             */
-/*   Updated: 2026/03/17 15:03:31 by acaldeir         ###   ########.fr       */
+/*   Updated: 2026/03/19 08:20:33 by acaldeir         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,6 +42,7 @@ static void	init_coders(t_sim *sim)
 	while (i < sim->args.number_of_coders)
 	{
 		sim->coders[i].id = i + 1;
+		pthread_mutex_init(&sim->coders[i].mtx, NULL);
 		sim->coders[i].state = STATE_WAITING;
 		sim->coders[i].last_compile_start_ms = sim->start_ms;
 		sim->coders[i].compiles_done = 0;
