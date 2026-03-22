@@ -2,94 +2,96 @@
 
 # Codexion
 
-Codexion is a multithreaded C simulation where coders compete for shared dongles under timing constraints.
-This README focuses on:
-- findings discovered during validation,
-- improvements implemented,
-- remaining tasks before final evaluation.
+## Description
 
-## Findings
+Codexion is a multithreaded C simulation where coder threads compete for shared
+dongles under timing constraints. A monitor thread detects burnout and stops
+the simulation when required.
 
-### 1. Cooldown wait bug
-- Symptom: a waiter could sleep forever after waking before cooldown expiry.
-- Root cause: `pthread_cond_wait` had no timed wake aligned to cooldown availability.
-- Impact: feasible scenarios could incorrectly end in burnout.
+Main goals:
+- correct thread synchronization with `pthread`,
+- scheduler support (`fifo` and `edf`) for dongle wait queues,
+- deterministic, non-interleaved logs,
+- robust input validation and safe shutdown behavior.
 
-### 2. Shared coder state race risk
-- Symptom: monitor reads fields while coder thread writes them.
-- Fields affected: `state`, `last_compile_start_ms`, `compiles_done`.
-- Impact: undefined behavior risk and non-deterministic decisions under load.
-
-### 3. Tester quality issues
-- `helgrind` mode used two `--tool` flags and could run the wrong tool.
-- Tester did not consistently report pass/fail by expected exit status.
-
-## Improvements Implemented
-
-### Synchronization and cooldown
-- Added per-coder mutex: `t_coder.mtx` in `coders/codexion.h`.
-- Added synchronized state helpers in `coders/coder_state.c`:
-  - `coder_set_compile_state`
-  - `coder_set_simple_state`
-  - `coder_get_last_compile_start`
-  - `coder_get_compiles_done`
-- Integrated these helpers in:
-  - `coders/coder_routine.c`
-  - `coders/monitor.c`
-  - `coders/dongles.c`
-- Reworked dongle waiting with timed wakeups in `coders/dongles.c`:
-  - Added `pthread_cond_timedwait` path based on dongle cooldown timestamp.
-  - Wait loop now wakes at cooldown deadline even without extra broadcast.
-
-### Lifecycle updates
-- Initialized/destroyed `t_coder.mtx` in:
-  - `coders/simulation_init.c`
-  - `coders/simulation_destroy.c`
-- Added `coders/coder_state.c` to `Makefile` sources.
-
-### Tester improvements
-- `tester.sh` now:
-  - fixes helgrind command (`valgrind --tool=helgrind`),
-  - supports strict variable mode safely,
-  - checks expected exit codes,
-  - prints `[PASS]` or `[FAIL]` per test case.
-
-## Verification Done
-
-- Build: `make` passes with `-Wall -Wextra -Werror -pthread`.
-- Cooldown regression scenario now progresses correctly:
-  - `./codexion 2 5000 50 50 50 3 100 fifo`
-- Tester smoke checks pass with explicit status reporting:
-  - `./tester.sh 1`
-  - `./tester.sh error_arg1`
-
-## What Still Needs To Be Done
-
-### Mandatory robustness hardening
-1. Remove pending waiter requests safely when a stop occurs during wait.
-2. Add rollback cleanup on partial init/thread-create failures.
-3. Recheck burnout deadline precision under stress (10 ms requirement).
-4. Validate liveness/fairness properties thoroughly for both FIFO and EDF.
-
-### Validation and quality
-5. Run full memory and race checks (valgrind memcheck + helgrind) on multiple scenarios.
-6. Expand tester assertions beyond exit code:
-- line format validation,
-- two dongle-take lines before compile,
-- single burnout line and no mixed output lines.
-7. Decide policy for `number_of_compiles_required == 0` and align with evaluator expectations.
-
-## Useful Commands
+## Instructions
 
 ```bash
 make
-./tester.sh 1
-./tester.sh error_arg1
-./tester.sh 1 mem
-./tester.sh 1 helgrind
 ```
 
-## Notes
+```bash
+./codexion <number_of_coders> <time_to_burnout> <time_to_compile> <time_to_debug> <time_to_refactor> <number_of_compiles_required> <dongle_cooldown> <scheduler>
+```
 
-- The codebase is now stronger on synchronization correctness and cooldown behavior.
-- Further evaluator-focused hardening is still recommended before final submission.
+Example:
+
+```bash
+./codexion 4 800 200 200 200 5 10 fifo
+```
+
+Rules enforced by parser:
+- scheduler must be exactly `fifo` or `edf`,
+- all numeric arguments must be valid integers,
+- negative values are rejected,
+- optional leading `+` is accepted,
+- `number_of_coders` must be strictly positive.
+
+Validation commands:
+- `./tester.sh 1` baseline FIFO scenario; expects successful run and one burnout.
+- `./tester.sh suite` compact non-valgrind regression set for FIFO, EDF, and fairness cases.
+- `./tester.sh suite_mem` same suite under Valgrind memcheck (leaks/invalid memory).
+- `./tester.sh suite_helgrind` same suite under Helgrind (data-race/lock issues).
+- `./tester.sh plus_args` verifies numeric args with leading `+` are accepted.
+- `./tester.sh error_plus_only` verifies malformed `+` token is rejected.
+
+`semantic log validation` means the script checks log line format and event consistency
+(not only exit code): valid messages, two dongle takes before each compile, expected burnout
+count when enforced, and required compile counts for fairness cases.
+
+## Blocking Cases Handled
+
+- Deadlock prevention (Coffman-oriented): coders do not keep resources while
+  indefinitely waiting for unavailable ones; waiting is explicit and ordered.
+- Starvation prevention: per-dongle waiter queues use policy-driven ordering
+  (`fifo` or `edf`) instead of race-based lock acquisition.
+- Cooldown handling: timed waits (`pthread_cond_timedwait`) wake waiters at
+  cooldown expiry even without extra signals.
+- Precise burnout detection: monitor checks elapsed time against burnout
+  deadline with millisecond precision.
+- Log serialization: logging is protected so concurrent threads cannot interleave
+  output lines.
+- Stop-path cleanup: queued wait requests are removed when stop is requested,
+  avoiding stale waiters and shutdown blocking.
+
+## Thread Synchronization Mechanisms
+
+- `pthread_mutex_t`
+  - dongle mutexes protect holder, cooldown timestamps, and waiter-heap updates,
+  - coder mutexes protect shared coder state read by both monitor and workers,
+  - global mutexes protect stop state and serialized logging.
+- `pthread_cond_t`
+  - condition variables block dongle waiters efficiently,
+  - timed waits handle cooldown deadlines,
+  - broadcasts wake all affected waiters on release/stop.
+- Custom stop event (`request_stop` / `should_stop`)
+  - threads coordinate shutdown through a shared stop flag and reason under lock.
+
+Thread-safe communication examples:
+- monitor reads coder fields through synchronized accessors,
+- coder threads update state under per-coder lock,
+- dongle queue operations (`push`, `pop`, `remove`) are done under dongle lock.
+
+## Resources
+
+- POSIX threads docs: `man pthreads`, `man pthread_mutex_lock`,
+  `man pthread_cond_wait`, `man pthread_cond_timedwait`
+- Linux man-pages: https://man7.org/linux/man-pages/
+- Priority queues/heaps: *Introduction to Algorithms* (CLRS)
+- Deadlock theory: Coffman conditions
+
+AI usage in this project:
+- used for refactoring support, test-script improvements, and edge-case review,
+- used to propose safer rollback/synchronization patterns,
+- final design decisions and validation (build, norm, runtime, valgrind,
+  helgrind) were executed and verified by the author.

@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   dongles_take.c                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: acaldeir <acaldeir@student.42.fr>          +#+  +:+       +#+        */
+/*   By: acaldeir <acaldeir@student.42lisboa.com>   +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/19 12:10:00 by copilot           #+#    #+#             */
-/*   Updated: 2026/03/19 13:15:51 by acaldeir         ###   ########.fr       */
+/*   Updated: 2026/03/20 15:59:02 by acaldeir         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -79,7 +79,10 @@ static int	wait_for_turn(t_coder *coder, t_dongle *dongle, t_request self)
 	while (!should_stop(coder->sim) && !can_take_now(dongle, self))
 		wait_for_signal_or_cooldown(dongle);
 	if (should_stop(coder->sim))
+	{
+		heap_remove_request(&dongle->waiters, self);
 		return (1);
+	}
 	heap_pop(&dongle->waiters, &dummy);
 	dongle->holder_id = coder->id;
 	return (0);

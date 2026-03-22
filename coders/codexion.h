@@ -6,7 +6,7 @@
 /*   By: acaldeir <acaldeir@student.42lisboa.com>   +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/18 19:24:23 by acaldeir          #+#    #+#             */
-/*   Updated: 2026/03/18 19:25:01 by acaldeir         ###   ########.fr       */
+/*   Updated: 2026/03/20 17:03:19 by acaldeir         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -89,7 +89,11 @@ typedef struct s_sim
 	t_args			args;
 	long long		start_ms;
 	long long		request_seq;
+	int				inited_coders;
+	int				inited_dongles;
 	bool			stop;
+	bool			stop_mtx_ready;
+	bool			log_mtx_ready;
 	int				stop_coder_id;
 	char			*stop_reason;
 	t_coder			*coders;
@@ -119,6 +123,7 @@ int			heap_push(t_heap *heap, t_request req);
 bool		heap_pop(t_heap *heap, t_request *out);
 bool		heap_peek(const t_heap *heap, t_request *out);
 bool		heap_empty(const t_heap *heap);
+bool		heap_remove_request(t_heap *heap, t_request target);
 
 int			take_dongle(t_coder *coder, t_dongle *dongle);
 void		release_dongle(t_coder *coder, t_dongle *dongle);
