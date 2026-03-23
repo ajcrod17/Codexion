@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   dongles_take.c                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: acaldeir <acaldeir@student.42lisboa.com>   +#+  +:+       +#+        */
+/*   By: acaldeir <acaldeir@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/19 12:10:00 by copilot           #+#    #+#             */
-/*   Updated: 2026/03/20 15:59:02 by acaldeir         ###   ########.fr       */
+/*   Updated: 2026/03/23 17:33:13 by acaldeir         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,52 +33,58 @@ static bool	can_take_now(t_dongle *dongle, t_request self)
 	return (head.coder_id == self.coder_id);
 }
 
-// Checks if dongle is past cooldown, if yes, converts millisecond timestamp
-// into seconds and nanoseconds required by the system. Calls timedwait that
-// releases the mutex while sleeping and re-acquires it upon waking.
-// cond_wait waits for signal from a coder who is currently compiling and also 
-// releases the mutex while sleeping and re-acquires it upon waking.
-static void	wait_for_signal_or_cooldown(t_dongle *dongle)
+/*
+ Wait once on dongle condition variable.
+ - unbounded mode: wait until a signal/cooldown event
+ - bounded mode: wait until earliest of timeout end or cooldown end
+*/
+static void	wait_once(t_dongle *dongle, long long end_ms, bool bounded)
 {
 	struct timespec	deadline;
 	long long		now;
+	long long		wake_ms;
 
 	now = now_ms();
-	if (dongle->available_at_ms > now)
+	if (!bounded && dongle->available_at_ms <= now)
 	{
-		deadline.tv_sec = dongle->available_at_ms / 1000;
-		deadline.tv_nsec = (dongle->available_at_ms % 1000) * 1000000;
-		pthread_cond_timedwait(&dongle->cv, &dongle->mtx, &deadline);
+		pthread_cond_wait(&dongle->cv, &dongle->mtx);
+		return ;
+	}
+	if (bounded)
+	{
+		wake_ms = end_ms;
+		if (dongle->available_at_ms > now && dongle->available_at_ms < wake_ms)
+			wake_ms = dongle->available_at_ms;
 	}
 	else
-		pthread_cond_wait(&dongle->cv, &dongle->mtx);
+		wake_ms = dongle->available_at_ms;
+	deadline.tv_sec = wake_ms / 1000;
+	deadline.tv_nsec = (wake_ms % 1000) * 1000000;
+	pthread_cond_timedwait(&dongle->cv, &dongle->mtx, &deadline);
 }
 
-// initializes request struct data and increments global sequence counter
-static t_request	build_request(t_coder *coder)
-{
-	t_request	self;
-	long long	last_compile;
-
-	self.coder_id = coder->id;
-	last_compile = coder_get_last_compile_start(coder);
-	self.deadline_ms = last_compile + coder->sim->args.time_to_burnout;
-	pthread_mutex_lock(&coder->sim->stop_mtx);
-	self.seq = ++coder->sim->request_seq;
-	pthread_mutex_unlock(&coder->sim->stop_mtx);
-	return (self);
-}
-
-// unlock mtx & wait for cv signal
-// check simulation ended?
-// remove ticket from the heap and take dongle
-static int	wait_for_turn(t_coder *coder, t_dongle *dongle, t_request self)
+/*
+ unlock mtx & wait for cv signal
+ check simulation ended?
+ remove ticket from the heap and take dongle
+*/
+static int	wait_for_turn(t_coder *coder, t_dongle *dongle,
+			t_request self, long long timeout_ms)
 {
 	t_request	dummy;
+	long long	end_ms;
+	bool		bounded;
 
+	bounded = (timeout_ms >= 0);
+	if (bounded)
+		end_ms = now_ms() + timeout_ms;
 	while (!should_stop(coder->sim) && !can_take_now(dongle, self))
-		wait_for_signal_or_cooldown(dongle);
-	if (should_stop(coder->sim))
+	{
+		if (bounded && now_ms() >= end_ms)
+			break ;
+		wait_once(dongle, end_ms, bounded);
+	}
+	if (should_stop(coder->sim) || !can_take_now(dongle, self))
 	{
 		heap_remove_request(&dongle->waiters, self);
 		return (1);
@@ -95,18 +101,25 @@ static int	wait_for_turn(t_coder *coder, t_dongle *dongle, t_request self)
  calls function to wait for dongle availability
  prints log with new coder state
 */
-int	take_dongle(t_coder *coder, t_dongle *dongle)
+int	take_dongle_with_timeout(t_coder *coder, t_dongle *dongle,
+		long long timeout_ms)
 {
 	t_request	self;
+	long long	last_compile;
 
-	self = build_request(coder);
+	self.coder_id = coder->id;
+	last_compile = coder_get_last_compile_start(coder);
+	self.deadline_ms = last_compile + coder->sim->args.time_to_burnout;
+	pthread_mutex_lock(&coder->sim->stop_mtx);
+	self.seq = ++coder->sim->request_seq;
+	pthread_mutex_unlock(&coder->sim->stop_mtx);
 	pthread_mutex_lock(&dongle->mtx);
 	if (heap_push(&dongle->waiters, self) != 0)
 	{
 		pthread_mutex_unlock(&dongle->mtx);
 		return (1);
 	}
-	if (wait_for_turn(coder, dongle, self) != 0)
+	if (wait_for_turn(coder, dongle, self, timeout_ms) != 0)
 	{
 		pthread_mutex_unlock(&dongle->mtx);
 		return (1);
@@ -114,4 +127,10 @@ int	take_dongle(t_coder *coder, t_dongle *dongle)
 	pthread_mutex_unlock(&dongle->mtx);
 	log_state(coder->sim, coder->id, "has taken a dongle");
 	return (0);
+}
+
+/* Keep legacy behavior: no timeout for callers using take_dongle */
+int	take_dongle(t_coder *coder, t_dongle *dongle)
+{
+	return (take_dongle_with_timeout(coder, dongle, -1));
 }

@@ -179,6 +179,47 @@ run_case()
 	return 0
 }
 
+run_repeat_no_burnout()
+{
+	local name="$1"
+	local args="$2"
+	local runs="$3"
+	local out_file
+	local status
+	local i
+
+	if [ -n "$VALGRIND" ]; then
+		print_fail "${name}: repeated burnout check is disabled with valgrind mode"
+		return 1
+	fi
+
+	echo -e "Test ${name}: ${args} (${runs} runs, must have zero burnout)\n"
+	i=1
+	while [ "$i" -le "$runs" ]
+	do
+		out_file="/tmp/codexion_${name}_${i}_$$.log"
+		$PROG $args >"$out_file" 2>&1
+		status=$?
+		if [ "$status" -ne 0 ]; then
+			print_fail "${name}: run ${i} exit=$status expected=0"
+			cat "$out_file"
+			rm -f "$out_file"
+			return 1
+		fi
+		if grep -q "burned out" "$out_file"; then
+			print_fail "${name}: run ${i} contains burnout"
+			cat "$out_file"
+			rm -f "$out_file"
+			return 1
+		fi
+		rm -f "$out_file"
+		i=$((i + 1))
+	done
+
+	print_pass "${name}: ${runs}/${runs} runs without burnout"
+	return 0
+}
+
 run_suite_mode()
 {
 	local mode="$1"
@@ -224,6 +265,9 @@ case "$1" in
 		;;
 	fair_edf)
 		run_case fairness_edf "5 5000 100 100 100 3 10 edf" 0 0 1 0
+		;;
+	starvation_fifo)
+		run_repeat_no_burnout "starvation_fifo" "10 610 200 100 100 5 0 fifo" 10
 		;;
 	precision_fifo)
 		run_case precision_fifo "1 1000 200 200 200 5 50 fifo" 0 1 0 1

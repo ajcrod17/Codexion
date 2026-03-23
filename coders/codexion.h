@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   codexion.h                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: acaldeir <acaldeir@student.42lisboa.com>   +#+  +:+       +#+        */
+/*   By: acaldeir <acaldeir@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/18 19:24:23 by acaldeir          #+#    #+#             */
-/*   Updated: 2026/03/20 17:03:19 by acaldeir         ###   ########.fr       */
+/*   Updated: 2026/03/23 16:05:26 by acaldeir         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -126,6 +126,8 @@ bool		heap_empty(const t_heap *heap);
 bool		heap_remove_request(t_heap *heap, t_request target);
 
 int			take_dongle(t_coder *coder, t_dongle *dongle);
+int			take_dongle_with_timeout(t_coder *coder, t_dongle *dongle,
+				long long timeout_ms);
 void		release_dongle(t_coder *coder, t_dongle *dongle);
 
 void		coder_set_compile_state(t_coder *coder, long long now);

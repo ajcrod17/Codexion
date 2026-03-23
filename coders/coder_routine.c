@@ -6,52 +6,102 @@
 /*   By: acaldeir <acaldeir@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/16 16:29:31 by acaldeir          #+#    #+#             */
-/*   Updated: 2026/03/19 15:59:07 by acaldeir         ###   ########.fr       */
+/*   Updated: 2026/03/23 18:31:31 by acaldeir         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "codexion.h"
 
-// To avoid deadlock, always pick the dongle with the smaller id first
-static void	pick_order(t_coder *coder, t_dongle **first, t_dongle **second)
+/*
+ Choose first/second dongle dynamically per retry attempt.
+ This alternates low-id/high-id preference to reduce persistent bias.
+*/
+static void	choose_attempt_order(t_coder *coder, int attempt,
+			t_dongle **order)
 {
-	if (coder->left->id < coder->right->id)
+	t_dongle	*low;
+	t_dongle	*high;
+
+	low = coder->left;
+	high = coder->right;
+	if (low->id > high->id)
 	{
-		*first = coder->left;
-		*second = coder->right;
+		low = coder->right;
+		high = coder->left;
+	}
+	if ((attempt + coder->id) % 2 == 0)
+	{
+		order[0] = low;
+		order[1] = high;
 	}
 	else
 	{
-		*first = coder->right;
-		*second = coder->left;
+		order[0] = high;
+		order[1] = low;
 	}
 }
 
-// Takes the 1st dongle and then the 2nd, if it fails releases the 1st dongle
-static int	acquire_dongles(t_coder *coder, t_dongle *first, t_dongle *second)
+/*
+ Compute adaptive timeout/backoff from burnout slack.
+ Lower slack => longer timeout for second dongle and shorter retry backoff.
+*/
+static void	acquire_timing_params(t_coder *coder, long long *timeout_ms,
+			long long *backoff_ms)
 {
-	if (take_dongle(coder, first) != 0)
-		return (1);
-	if (take_dongle(coder, second) != 0)
+	long long	slack;
+	long long	jitter;
+
+	slack = coder->sim->args.time_to_burnout
+		- (now_ms() - coder_get_last_compile_start(coder));
+	jitter = coder->id % 3;
+	*timeout_ms = 8;
+	if (slack <= 220)
+		*timeout_ms = 16;
+	if (slack <= 120)
+		*timeout_ms = 24;
+	if (slack <= 60)
+		*timeout_ms = 36;
+	if (slack <= 20)
+		*timeout_ms = 48;
+	*backoff_ms = 2 + jitter;
+	if (slack <= 220)
+		*backoff_ms = 1 + jitter;
+	if (slack <= 120)
+		*backoff_ms = 1;
+	if (slack <= 60)
+		*backoff_ms = 0;
+}
+
+/*
+ Take first dongle then try second.
+ On each failed attempt, release first, sleep backoff, and retry with
+ potentially inverted order.
+*/
+static int	acquire_dongles(t_coder *coder)
+{
+	t_dongle	*order[2];
+	long long	timeout_ms;
+	long long	backoff_ms;
+	int			attempt;
+
+	attempt = 0;
+	while (!should_stop(coder->sim))
 	{
-		release_dongle(coder, first);
-		return (1);
+		acquire_timing_params(coder, &timeout_ms, &backoff_ms);
+		choose_attempt_order(coder, attempt, order);
+		if (take_dongle(coder, order[0]) != 0)
+			return (1);
+		if (take_dongle_with_timeout(coder, order[1], timeout_ms) == 0)
+			return (0);
+		release_dongle(coder, order[0]);
+		sleep_ms_interruptible(coder->sim, backoff_ms);
+		attempt++;
 	}
-	return (0);
+	return (1);
 }
 
-// Must be called with both dongles held, changes coder state, prints log,
-// and goes to sleep, wakes up earlier if the sim stops
-static void	run_compile_phase(t_coder *coder)
-{
-	coder_set_compile_state(coder, now_ms());
-	log_state(coder->sim, coder->id, "is compiling");
-	sleep_ms_interruptible(coder->sim, coder->sim->args.time_to_compile);
-}
-
-// Changes coder state to debugging, prints log, and goes to sleep, wakes up
-// earlier if the sim stops, then repeats for refactoring
-static void	run_post_compile_phases(t_coder *coder)
+/* Run post-compile phases */
+static void	run_cycle_phases(t_coder *coder)
 {
 	coder_set_simple_state(coder, STATE_DEBUGGING);
 	log_state(coder->sim, coder->id, "is debugging");
@@ -65,8 +115,7 @@ static void	run_post_compile_phases(t_coder *coder)
  * The main simulation loop for each coder thread.
  * * Each coder follows a strict cycle:
  * 1. Check if the simulation should stop (burnout or completion).
- * 2. Acquire two adjacent dongles using a fixed-order hierarchy to 
- * prevent deadlocks (Low ID then High ID).
+ * 2. Acquire two adjacent dongles with dynamic per-attempt order.
  * 3. Perform the 'Compile' phase (resets burnout timer).
  * 4. Release dongles to allow neighbors to work.
  * 5. Perform 'Debug' and 'Refactor' phases independently.
@@ -74,19 +123,18 @@ static void	run_post_compile_phases(t_coder *coder)
 void	*coder_routine(void *arg)
 {
 	t_coder		*coder;
-	t_dongle	*first;
-	t_dongle	*second;
 
 	coder = (t_coder *)arg;
-	pick_order(coder, &first, &second);
 	while (!should_stop(coder->sim))
 	{
-		if (acquire_dongles(coder, first, second) != 0)
+		if (acquire_dongles(coder) != 0)
 			break ;
-		run_compile_phase(coder);
-		release_dongle(coder, second);
-		release_dongle(coder, first);
-		run_post_compile_phases(coder);
+		coder_set_compile_state(coder, now_ms());
+		log_state(coder->sim, coder->id, "is compiling");
+		sleep_ms_interruptible(coder->sim, coder->sim->args.time_to_compile);
+		release_dongle(coder, coder->right);
+		release_dongle(coder, coder->left);
+		run_cycle_phases(coder);
 	}
 	return (NULL);
 }

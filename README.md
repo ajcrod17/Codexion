@@ -45,16 +45,22 @@ Validation commands:
 - `./tester.sh plus_args` verifies numeric args with leading `+` are accepted.
 - `./tester.sh error_plus_only` verifies malformed `+` token is rejected.
 
+Known status notes:
+- Helgrind may abort with an internal assertion on this project setup, even when
+  normal suite and memcheck pass.
+
 `semantic log validation` means the script checks log line format and event consistency
 (not only exit code): valid messages, two dongle takes before each compile, expected burnout
 count when enforced, and required compile counts for fairness cases.
 
 ## Blocking Cases Handled
 
-- Deadlock prevention (Coffman-oriented): coders do not keep resources while
-  indefinitely waiting for unavailable ones; waiting is explicit and ordered.
-- Starvation prevention: per-dongle waiter queues use policy-driven ordering
-  (`fifo` or `edf`) instead of race-based lock acquisition.
+- Deadlock risk mitigation (Coffman-oriented): coders avoid indefinite waiting
+  for the second resource by using bounded second-dongle acquisition with
+  retry/release behavior.
+- Starvation mitigation: per-dongle waiter queues use policy-driven ordering
+  (`fifo` or `edf`) plus adaptive retry timing. This significantly reduces
+  starvation frequency but does not guarantee zero burnout in all stress runs.
 - Cooldown handling: timed waits (`pthread_cond_timedwait`) wake waiters at
   cooldown expiry even without extra signals.
 - Precise burnout detection: monitor checks elapsed time against burnout
@@ -94,4 +100,5 @@ AI usage in this project:
 - used for refactoring support, test-script improvements, and edge-case review,
 - used to propose safer rollback/synchronization patterns,
 - final design decisions and validation (build, norm, runtime, valgrind,
-  helgrind) were executed and verified by the author.
+  helgrind) were executed and verified by the author (with the Helgrind
+  limitation above).
