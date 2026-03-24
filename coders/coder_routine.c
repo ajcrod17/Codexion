@@ -6,7 +6,7 @@
 /*   By: acaldeir <acaldeir@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/16 16:29:31 by acaldeir          #+#    #+#             */
-/*   Updated: 2026/03/23 18:31:31 by acaldeir         ###   ########.fr       */
+/*   Updated: 2026/03/24 11:28:14 by acaldeir         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,33 +43,31 @@ static void	choose_attempt_order(t_coder *coder, int attempt,
 
 /*
  Compute adaptive timeout/backoff from burnout slack.
- Lower slack => longer timeout for second dongle and shorter retry backoff.
+ Keep second-dongle wait bounded, but large enough to cover a realistic
+ window (holder compile + cooldown). Also keep retry loops from becoming hot.
 */
 static void	acquire_timing_params(t_coder *coder, long long *timeout_ms,
 			long long *backoff_ms)
 {
 	long long	slack;
+	long long	timeout_cap;
 	long long	jitter;
 
 	slack = coder->sim->args.time_to_burnout
 		- (now_ms() - coder_get_last_compile_start(coder));
 	jitter = coder->id % 3;
-	*timeout_ms = 8;
-	if (slack <= 220)
+	*timeout_ms = coder->sim->args.time_to_compile
+		+ coder->sim->args.dongle_cooldown;
+	if (*timeout_ms < 16)
 		*timeout_ms = 16;
-	if (slack <= 120)
-		*timeout_ms = 24;
-	if (slack <= 60)
-		*timeout_ms = 36;
-	if (slack <= 20)
-		*timeout_ms = 48;
-	*backoff_ms = 2 + jitter;
-	if (slack <= 220)
-		*backoff_ms = 1 + jitter;
-	if (slack <= 120)
-		*backoff_ms = 1;
-	if (slack <= 60)
-		*backoff_ms = 0;
+	timeout_cap = slack - 20;
+	if (timeout_cap < 4)
+		timeout_cap = 4;
+	if (*timeout_ms > timeout_cap)
+		*timeout_ms = timeout_cap;
+	*backoff_ms = 1 + jitter;
+	if (slack > 300)
+		*backoff_ms = 2 + jitter;
 }
 
 /*
