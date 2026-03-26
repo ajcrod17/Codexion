@@ -6,7 +6,7 @@
 /*   By: acaldeir <acaldeir@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/19 12:10:00 by copilot           #+#    #+#             */
-/*   Updated: 2026/03/23 17:33:13 by acaldeir         ###   ########.fr       */
+/*   Updated: 2026/03/26 16:47:50 by acaldeir         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -109,7 +109,8 @@ int	take_dongle_with_timeout(t_coder *coder, t_dongle *dongle,
 
 	self.coder_id = coder->id;
 	last_compile = coder_get_last_compile_start(coder);
-	self.deadline_ms = last_compile + coder->sim->args.time_to_burnout;
+	self.deadline_ms = last_compile + coder->sim->args.time_to_burnout
+		+ coder->sim->args.time_to_compile;
 	pthread_mutex_lock(&coder->sim->stop_mtx);
 	self.seq = ++coder->sim->request_seq;
 	pthread_mutex_unlock(&coder->sim->stop_mtx);

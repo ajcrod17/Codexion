@@ -6,7 +6,7 @@
 /*   By: acaldeir <acaldeir@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/16 16:29:31 by acaldeir          #+#    #+#             */
-/*   Updated: 2026/03/24 11:28:14 by acaldeir         ###   ########.fr       */
+/*   Updated: 2026/03/26 17:13:39 by acaldeir         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -53,21 +53,21 @@ static void	acquire_timing_params(t_coder *coder, long long *timeout_ms,
 	long long	timeout_cap;
 	long long	jitter;
 
-	slack = coder->sim->args.time_to_burnout
+	slack = coder->sim->args.time_to_burnout + coder->sim->args.time_to_compile
 		- (now_ms() - coder_get_last_compile_start(coder));
 	jitter = coder->id % 3;
-	*timeout_ms = coder->sim->args.time_to_compile
+	*timeout_ms = (coder->sim->args.time_to_compile * 2)
 		+ coder->sim->args.dongle_cooldown;
 	if (*timeout_ms < 16)
 		*timeout_ms = 16;
-	timeout_cap = slack - 20;
-	if (timeout_cap < 4)
-		timeout_cap = 4;
+	timeout_cap = slack - 30;
+	if (timeout_cap < 20)
+		timeout_cap = 20;
 	if (*timeout_ms > timeout_cap)
 		*timeout_ms = timeout_cap;
-	*backoff_ms = 1 + jitter;
+	*backoff_ms = 2 + jitter;
 	if (slack > 300)
-		*backoff_ms = 2 + jitter;
+		*backoff_ms = 3 + jitter;
 }
 
 /*
@@ -90,7 +90,10 @@ static int	acquire_dongles(t_coder *coder)
 		if (take_dongle(coder, order[0]) != 0)
 			return (1);
 		if (take_dongle_with_timeout(coder, order[1], timeout_ms) == 0)
+		{
+			coder_set_compile_state(coder, now_ms());
 			return (0);
+		}
 		release_dongle(coder, order[0]);
 		sleep_ms_interruptible(coder->sim, backoff_ms);
 		attempt++;
@@ -127,7 +130,6 @@ void	*coder_routine(void *arg)
 	{
 		if (acquire_dongles(coder) != 0)
 			break ;
-		coder_set_compile_state(coder, now_ms());
 		log_state(coder->sim, coder->id, "is compiling");
 		sleep_ms_interruptible(coder->sim, coder->sim->args.time_to_compile);
 		release_dongle(coder, coder->right);

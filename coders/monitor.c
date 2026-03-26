@@ -6,7 +6,7 @@
 /*   By: acaldeir <acaldeir@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/16 16:30:18 by acaldeir          #+#    #+#             */
-/*   Updated: 2026/03/19 16:53:31 by acaldeir         ###   ########.fr       */
+/*   Updated: 2026/03/26 16:47:50 by acaldeir         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,12 +36,14 @@ static bool	check_burnout(t_sim *sim, long long now)
 {
 	int			i;
 	long long	since_last;
+	long long	burnout_window;
 
 	i = 0;
+	burnout_window = sim->args.time_to_burnout + sim->args.time_to_compile;
 	while (i < sim->args.number_of_coders)
 	{
 		since_last = now - coder_get_last_compile_start(&sim->coders[i]);
-		if (since_last > sim->args.time_to_burnout)
+		if (since_last > burnout_window)
 		{
 			coder_set_simple_state(&sim->coders[i], STATE_BURNED_OUT);
 			request_stop(sim, sim->coders[i].id, "burnout");
