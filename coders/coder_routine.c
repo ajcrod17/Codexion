@@ -3,21 +3,21 @@
 /*                                                        :::      ::::::::   */
 /*   coder_routine.c                                    :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: acaldeir <acaldeir@student.42.fr>          +#+  +:+       +#+        */
+/*   By: acaldeir <acaldeir@student.42lisboa.com>   +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/16 16:29:31 by acaldeir          #+#    #+#             */
-/*   Updated: 2026/03/26 17:13:39 by acaldeir         ###   ########.fr       */
+/*   Updated: 2026/03/26 20:28:31 by acaldeir         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "codexion.h"
 
 /*
- Choose first/second dongle dynamically per retry attempt.
- This alternates low-id/high-id preference to reduce persistent bias.
+ Choose first/second dongle based on coder ID.
+ Even-ID coders prefer low-id first; odd-ID coders prefer high-id first.
+ This ensures opposite orders to prevent circular waits.
 */
-static void	choose_attempt_order(t_coder *coder, int attempt,
-			t_dongle **order)
+static void	choose_attempt_order(t_coder *coder, t_dongle **order)
 {
 	t_dongle	*low;
 	t_dongle	*high;
@@ -29,7 +29,7 @@ static void	choose_attempt_order(t_coder *coder, int attempt,
 		low = coder->right;
 		high = coder->left;
 	}
-	if ((attempt + coder->id) % 2 == 0)
+	if (coder->id % 2 == 0)
 	{
 		order[0] = low;
 		order[1] = high;
@@ -80,13 +80,11 @@ static int	acquire_dongles(t_coder *coder)
 	t_dongle	*order[2];
 	long long	timeout_ms;
 	long long	backoff_ms;
-	int			attempt;
 
-	attempt = 0;
 	while (!should_stop(coder->sim))
 	{
 		acquire_timing_params(coder, &timeout_ms, &backoff_ms);
-		choose_attempt_order(coder, attempt, order);
+		choose_attempt_order(coder, order);
 		if (take_dongle(coder, order[0]) != 0)
 			return (1);
 		if (take_dongle_with_timeout(coder, order[1], timeout_ms) == 0)
@@ -96,7 +94,6 @@ static int	acquire_dongles(t_coder *coder)
 		}
 		release_dongle(coder, order[0]);
 		sleep_ms_interruptible(coder->sim, backoff_ms);
-		attempt++;
 	}
 	return (1);
 }
