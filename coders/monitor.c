@@ -6,7 +6,7 @@
 /*   By: acaldeir <acaldeir@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/16 16:30:18 by acaldeir          #+#    #+#             */
-/*   Updated: 2026/03/26 16:47:50 by acaldeir         ###   ########.fr       */
+/*   Updated: 2026/03/27 11:58:43 by acaldeir         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,8 +30,12 @@ static bool	all_coders_done(const t_sim *sim)
 	return (true);
 }
 
-// Loops through the coders and checks time without compiling vs time to burnout
-// if bigger sets state to burnout, requests stop and prints log
+/*
+ Check if any coder has exceeded time_to_burnout since last compilation.
+ Formula: elapsed time since last_compile_start > time_to_burnout (milliseconds).
+ If true, set coder to BURNED_OUT state, request stop, and log burnout event.
+ Runs every monitor cycle (~1ms) for precise deadline detection.
+*/
 static bool	check_burnout(t_sim *sim, long long now)
 {
 	int			i;

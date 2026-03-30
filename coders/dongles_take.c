@@ -6,7 +6,7 @@
 /*   By: acaldeir <acaldeir@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/19 12:10:00 by copilot           #+#    #+#             */
-/*   Updated: 2026/03/26 16:47:50 by acaldeir         ###   ########.fr       */
+/*   Updated: 2026/03/27 11:56:04 by acaldeir         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -95,11 +95,11 @@ static int	wait_for_turn(t_coder *coder, t_dongle *dongle,
 }
 
 /*
- calls the initialization of request struct data
- locks dongle mutex
- push request into heap
- calls function to wait for dongle availability
- prints log with new coder state
+ Initialize request struct with coder_id and EDF deadline (per spec).
+ Deadline formula: deadline_ms = last_compile_start + time_to_burnout
+ Lock dongle, push request to scheduler heap, wait for turn, log event.
+ Returns 0 if dongle acquired within timeout (unbounded if timeout < 0),
+ else 1 if timeout or stop signal received.
 */
 int	take_dongle_with_timeout(t_coder *coder, t_dongle *dongle,
 		long long timeout_ms)
@@ -109,8 +109,7 @@ int	take_dongle_with_timeout(t_coder *coder, t_dongle *dongle,
 
 	self.coder_id = coder->id;
 	last_compile = coder_get_last_compile_start(coder);
-	self.deadline_ms = last_compile + coder->sim->args.time_to_burnout
-		+ coder->sim->args.time_to_compile;
+	self.deadline_ms = last_compile + coder->sim->args.time_to_burnout;
 	pthread_mutex_lock(&coder->sim->stop_mtx);
 	self.seq = ++coder->sim->request_seq;
 	pthread_mutex_unlock(&coder->sim->stop_mtx);

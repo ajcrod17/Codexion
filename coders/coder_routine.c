@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   coder_routine.c                                    :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: acaldeir <acaldeir@student.42lisboa.com>   +#+  +:+       +#+        */
+/*   By: acaldeir <acaldeir@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/16 16:29:31 by acaldeir          #+#    #+#             */
-/*   Updated: 2026/03/26 20:28:31 by acaldeir         ###   ########.fr       */
+/*   Updated: 2026/03/27 11:56:04 by acaldeir         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,9 +42,10 @@ static void	choose_attempt_order(t_coder *coder, t_dongle **order)
 }
 
 /*
- Compute adaptive timeout/backoff from burnout slack.
- Keep second-dongle wait bounded, but large enough to cover a realistic
- window (holder compile + cooldown). Also keep retry loops from becoming hot.
+ Compute adaptive timeout for second-dongle acquisition and backoff delay.
+ Timeout aims for realistic window (holder compile + cooldown), capped by
+ burnout slack to prevent excessive waiting. Backoff prevents hot retry loops.
+ Ensures we don't exceed available burnout window with aggressive timeouts.
 */
 static void	acquire_timing_params(t_coder *coder, long long *timeout_ms,
 			long long *backoff_ms)
@@ -71,9 +72,10 @@ static void	acquire_timing_params(t_coder *coder, long long *timeout_ms,
 }
 
 /*
- Take first dongle then try second.
- On each failed attempt, release first, sleep backoff, and retry with
- potentially inverted order.
+ Acquire two dongles with deadlock avoidance: first unbounded, second bounded.
+ Strategy: alternate dongle order by coder parity to prevent circular waits.
+ On second-dongle timeout, release first dongle, backoff, and retry.
+ This ensures forward progress without indefinite waiting.
 */
 static int	acquire_dongles(t_coder *coder)
 {
